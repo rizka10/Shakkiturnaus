@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shakkiturnaus</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div id="app">
+<header>
+  <div>
+    <div class="logo">♟ Shakkiturnaus</div>
+    <div class="logo-sub">Swiss-järjestelmä</div>
+  </div>
+  <nav>
+    <button class="tab active" data-page="pairings">Paritukset</button>
+    <button class="tab" data-page="standings">Sijoitukset</button>
+    <button class="tab" data-page="cross">Kohtaamiset</button>
+    <button class="tab" data-page="players">Pelaajat</button>
+    <button class="tab" data-page="settings">Asetukset</button>
+  </nav>
+</header>
+
+<main>
+<!-- ── SIDEBAR ── -->
+<aside>
+  <div class="s-section">
+    <div class="s-label">Turnaus</div>
+    <div class="s-field">
+      <label>Nimi</label>
+      <input id="cfg-name" type="text" value="Shakkiturnaus">
+    </div>
+    <div class="s-field">
+      <label>Kierroksia</label>
+      <input id="cfg-rounds" type="number" value="7" min="1" max="30">
+    </div>
+    <div class="s-field">
+      <label>Bye-pisteet</label>
+      <select id="cfg-bye">
+        <option value="1">1 piste</option>
+        <option value="0.5" selected>½ pistettä</option>
+        <option value="0">0 pistettä</option>
+      </select>
+    </div>
+  </div>
+
+  <hr>
+
+  <div class="s-section">
+    <div class="s-label">Kierros</div>
+    <div id="sidebar-round-info" style="font-size:11px;color:var(--muted);margin-bottom:8px">Ei aloitettu</div>
+    <button class="btn btn-green" id="btn-new-round" style="width:100%">▶ Luo paritukset</button>
+    <div id="btn-delete-round-wrap" style="margin-top:4px;display:none">
+      <button class="btn btn-ghost btn-sm" id="btn-delete-round" style="width:100%">✕ Poista viimeisin kierros</button>
+    </div>
+  </div>
+
+  <hr>
+
+  <div class="s-section">
+    <div class="s-label">Varmuuskopio</div>
+    <div class="btn-row">
+      <button class="btn btn-gold btn-sm" id="btn-save">💾 Tallenna</button>
+      <button class="btn btn-ghost btn-sm" id="btn-load">📂 Lataa</button>
+    </div>
+    <input type="file" id="file-input" accept=".json" style="display:none">
+  </div>
+
+  <hr>
+
+  <div class="s-section">
+    <button class="btn btn-red btn-sm" id="btn-reset">🗑 Nollaa kaikki</button>
+  </div>
+</aside>
+
+<!-- ── CONTENT ── -->
+<div class="content">
+
+  <!-- PARITUKSET -->
+  <div id="page-pairings" class="page active">
+    <div class="page-hdr">
+      <h2>Paritukset</h2>
+      <span class="sub" id="pairings-sub"></span>
+    </div>
+    <div class="stat-bar">
+      <div class="stat-item"><div class="stat-v" id="st-players">0</div><div class="stat-l">Pelaajat</div></div>
+      <div class="stat-item"><div class="stat-v" id="st-rounds">0</div><div class="stat-l">Kierrokset</div></div>
+      <div class="stat-item"><div class="stat-v" id="st-boards">0</div><div class="stat-l">Laudat</div></div>
+      <div class="stat-item"><div class="stat-v" id="st-done">0</div><div class="stat-l">Tulokset</div></div>
+    </div>
+    <div class="round-tabs" id="round-tabs"></div>
+    <div id="pairings-body">
+      <div class="msg">Lisää pelaajat Pelaajat-välilehdeltä ja luo paritukset vasemmalta.</div>
+    </div>
+  </div>
+
+  <!-- SIJOITUKSET -->
+  <div id="page-standings" class="page">
+    <div class="page-hdr"><h2>Sijoitukset</h2></div>
+    <div id="standings-body">
+      <div class="msg">Ei pelaajia.</div>
+    </div>
+  </div>
+
+  <!-- KOHTAAMISET -->
+  <div id="page-cross" class="page">
+    <div class="page-hdr"><h2>Kohtaamiset</h2></div>
+    <div id="cross-body">
+      <div class="msg">Ei tuloksia.</div>
+    </div>
+  </div>
+
+  <!-- PELAAJAT -->
+  <div id="page-players" class="page">
+    <div class="page-hdr"><h2>Pelaajat</h2></div>
+
+    <div style="margin-bottom:20px;padding:16px;border:1px solid var(--border);background:white">
+      <div class="s-label" style="margin-bottom:8px">Tuo pelaajat (Swiss-Manager tai yksinkertainen lista)</div>
+      <textarea id="import-text" placeholder="001 Virtanen Vesa             2340  HSS&#10;002 Korhonen Kimmo            2210  TuSS&#10;&#10;tai yksinkertaisesti:&#10;Virtanen Vesa 2340&#10;Korhonen Kimmo"></textarea>
+      <div class="hint">
+        Tuetut formaatit:<br>
+        Swiss-Manager: <code>001 Sukunimi Etunimi    2150  FIN</code><br>
+        Yksinkertainen: <code>Etunimi Sukunimi 2150</code> tai <code>Etunimi Sukunimi</code>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-green" id="btn-import">Tuo pelaajat</button>
+        <button class="btn btn-ghost btn-sm" id="btn-example">Esimerkki</button>
+      </div>
+      <div id="import-msg"></div>
+    </div>
+
+    <div style="padding:16px;border:1px solid var(--border);background:white">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div class="s-label" style="margin-bottom:0">Pelaajat (<span id="player-count">0</span>)</div>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-ghost btn-sm" id="btn-add-player">+ Lisää</button>
+          <button class="btn btn-red btn-sm" id="btn-clear-players">Tyhjennä</button>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Nimi</th>
+            <th>Rating</th>
+            <th>Seura</th>
+            <th>Tila</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="player-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ASETUKSET -->
+  <div id="page-settings" class="page">
+    <div class="page-hdr"><h2>Tietoja</h2></div>
+    <div class="msg">
+      Shakkiturnausohjelma — Swiss-järjestelmä<br><br>
+      • Paritukset tehdään pisteiden mukaan järjestettyihin ryhmiin<br>
+      • Väritasapaino seurataan ja pyritään tasaamaan<br>
+      • Uusintaotteluita vältetään<br>
+      • Tiebreak: Buchholz → Sonneborn-Berger<br>
+      • Varmuuskopio: JSON-tiedosto<br>
+      • Automaattitallennus: selaimen localStorage
+    </div>
+  </div>
+
+</div><!-- .content -->
+</main>
+</div><!-- #app -->
+
+<!-- MODAL -->
+<div class="modal-bg" id="modal-bg">
+  <div class="modal">
+    <h3 id="modal-title"></h3>
+    <p id="modal-msg"></p>
+    <div class="btn-row">
+      <button class="btn btn-red" id="modal-ok">Vahvista</button>
+      <button class="btn btn-ghost" id="modal-cancel">Peruuta</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/app-state.js"></script>
+<script src="js/helpers.js"></script>
+<script src="js/playermanagement.js"></script>
+<script src="js/players.js"></script>
+<script src="js/pairing.js"></script>
+<script src="js/render.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/events.js"></script>
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════
+// STATE — kertoo ohjelman tilan
+// appState.js
+// ═══════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════
+// SCORE ENGINE - erinäisiä apurifunktioita, joita nykyrakenteessa render.js hyödyntää
+// players.js
+//    - calcScores(): palauttaa luettelon pelaajien kokonaispisteistä
+//    - calcBuchholz(): palauttaa luettelon Buchholz-vertailuluvuista
+//    - calcSB(): palauttaa luettelon Sonneborn-Berger-vertailuluvuista
+//    - calcColors(): palauttaa luettelon kunkin pelaajan väritasapainosta
+//    - calcOpponents(): palauttaa luettelon kunkin pelaajan vastustajien ID:istä
+//    - calcByes(): palauttaa luettelon pelaajien vapaakierrosten määristä
+//    - calcElo(): laskee FIDE-luvut pelaajille. TODO: K=20 on epäsopiva oletus.
+// pairing.js
+// paritusmasiina on eriytetty tänne. Vaikuttaa toimivan, mutten ole varma.
+//    - TODO: pelaajat tarvitsisivat alkunumerot. Ratingien käyttö epäluotettavaa
+//    - TODO: en ole käynyt algoritmia muutenkaan ajatuksella läpi
+// ═══════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════
+// HELPERS
+// sekalaisia funktioita, jotka eivät sovi muualle
+// helpers.js
+//    - fmtScore(n): muuntaa int-pisteet (esim. 3.5) str-pisteiksi (3½)
+//    - playerById(id): palauttaa pelaajaolion
+///   - showModal(title, msg, cb):
+//        - näyttää modaali-ikkunan, otsikolla title ja viestillä msg
+//        - mikäli käyttäjä painaa ok, toteuttaa callbackin cb
+//        - riippumatta mitä käyttäjä klikkaa, modaali-ikkuna piilotetaan
+//    - initModalListeners()
+//        - alustaa modaali-ikkunan painikkeet toimintakuntoon
+// ═══════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════
+// RENDER - JavaScript-logiikkaa, joka piirtää ohjelman tilatietoja ruudulle
+// render.js
+//    - render(): renderöi sovellusnäkymän apufunktioidensa avulla
+//    - renderSidebar(): apufunktio, joka renderöi vasemman sivupalkin
+//    - switchView(): paritusnäkymän apufunktio, joka näyttää halutun kierroksen parit
+//    - setRes(roundIdx, pairIdx, res): muuttaa tulosta järjestelmässä ja ruudulla
+//    - renderStandings(): renderöi sijoitustilanteen ruudulle (sijoitukset)
+//    - renderCross(): renderöi ristitaulukon ruudulle (kohtaamiset)
+//    - renderPlayers(): renderöi pelaajanäkymän ruudulle (pelaajat)
+// ═══════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════
+// PLAYER MANAGEMENT - pelaajien lisäämiseen ja poistamiseen liittyvä logiikka
+// playermanagement.js
+//    - toggleActive(id): aktivoi/inaktivoi pelaajan
+//    - removePlayer(id): poistaa pelaajan turnauksesta
+//    - importPlayers(): lukee tekstikentän ja tuo pelaajat sen mukaisesti
+// ═══════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════
+// BACKUP
+// storage.js
+//    - saveBackup(): tallentaa turnauksen nykytilan JSON-muodossa käyttäjän laitteeseen
+//    - loadBackupFile(e): ottaa käyttöön JSON-muotoisen turnaustiedoston laitteesta
+//    - autoSave(): tallentaa turnauksen nykytilan selaimen muistiin, kun jokin muuttuu
+//    - loadAutoSave(): palauttaa selaimen muistista viimeisimmän turnaustilanteen
+//    - syncCfgFields(): loadAutoSaven apufunktio, joka asettaa sivupalkin asetuskentät sopiviksi
+//    - readCfgFields(): apufunktio, joka lukee sivupalkin asetuskentät
+// ═══════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════
+// EVENT WIRING - sisältää läjän ohjelman painikkeiden kuunteluun liittyvää logiikkaa.
+// events.js
+// ═══════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════
+// INIT - ohjelman käynnistys
+initModalListeners();
+loadAutoSave();
+render();
+// ═══════════════════════════════════════════════════════
+</script>
+</body>
+</html>
