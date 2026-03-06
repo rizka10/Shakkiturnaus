@@ -102,6 +102,53 @@ document.getElementById('btn-clear-players').addEventListener('click', () => {
   });
 });
 
-['cfg-name','cfg-rounds','cfg-bye'].forEach(id => {
-  document.getElementById(id).addEventListener('change', () => { readCfgFields(); autoSave(); renderSidebar(); });
-});
+const configFields = [
+  { id: 'cfg-name',          type: 'text',   default: 'Shakkiturnaus' },
+  { id: 'cfg-rounds',        type: 'number', default: 7, min: 1 },
+  { id: 'cfg-games-per-pair', type: 'number', default: 1, min: 1 },
+  { id: 'cfg-bye',           type: 'number', default: 1.0, min: 0, step: 0.5 }
+];
+
+// Yksi yhteinen tallennusfunktio
+function updateConfigFromField(id) {
+  const field = configFields.find(f => f.id === id);
+  if (!field) return;
+
+  const input = document.getElementById(id);
+  if (!input) return;
+
+  let value = input.value.trim();
+
+  if (field.type === 'number') {
+    const num = parseFloat(value); // parseFloat → cfg-bye voi olla 0.5
+    value = isNaN(num) || num < field.min ? field.default : num;
+  } else {
+    value = value || field.default;
+  }
+
+  // Muutetaan appStatea
+  const key = id.replace('cfg-', ''); // cfg-rounds → rounds
+  appState.cfg[key] = value;
+
+  autoSave();
+  render();  // turvallisinta päivittää koko näkymä eikä vain sivupalkkia
+}
+
+// Lisää kuuntelijat kerran, kutsutaan pääohjelman lopussa
+function setupConfigListeners() {
+  configFields.forEach(field => {
+    const input = document.getElementById(field.id);
+    if (!input) return;
+
+    // 'input' numerokentille (reaaliaikainen), 'change' tekstikentille
+    const eventType = field.type === 'number' ? 'input' : 'change';
+
+    input.addEventListener(eventType, () => {
+      updateConfigFromField(field.id);
+    });
+
+    // Alusta kentän arvo nykyisestä appState:sta
+    const key = field.id.replace('cfg-', '');
+    input.value = appState.cfg[key] ?? field.default;
+  });
+}
