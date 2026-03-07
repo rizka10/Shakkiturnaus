@@ -378,8 +378,8 @@ function renderPlayers() {
       <td class="td-muted">${p.club || ''}</td>
       <td>
         <input type="text" value="${p.group || ''}" size="3" 
-               onblur="setGroup(${p.id}, this.value)" 
-               onblur="this.value = (appState.players.find(pl => pl.id === ${p.id})?.group || '')">
+              ${appState.rounds.length > 0 ? 'disabled title="Ryhmää ei voi muuttaa kun turnaus on alkanut"' : ''}
+              onblur="if (${appState.rounds.length === 0}) setGroup(${p.id}, this.value)">
       </td>
       <td class="td-muted">${p.active ? 'Aktiivinen' : 'Ei pelaa'}</td>
       <td>
@@ -397,11 +397,16 @@ function renderPlayers() {
 
 // Korjattu setGroup – EI kutsu render() suoraan onchange:ssa, vaan renderöi vasta kun input menettää fokus (onblur)
 function setGroup(id, val) {
+  if (appState.rounds.length > 0) {
+    console.warn('Ryhmän muutos estetty: turnaus on käynnissä');
+    return; 
+  }
+
   const p = playerById(id);
   if (p) {
     p.group = val.trim().toUpperCase();
     autoSave();
-    // render() → POISTETAAN täältä! Sen sijaan käytä onblur-tapahtumaa inputissa (ks. yllä)
+    render();
   }
 }
 

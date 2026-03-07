@@ -382,6 +382,13 @@ textarea:focus { border-color: var(--gold); }
 .hint { font-size: 10px; color: var(--muted); line-height: 1.8; margin-top: 6px; }
 .hint code { background: var(--tan); padding: 0 3px; }
 
+.msg.warn {
+  background: rgba(241, 196, 15, 0.15);  /* vaalea keltainen */
+  border-left: 4px solid #f1c40f;
+  padding: 10px;
+  color: #7f6000;
+}
+
 /* ── PAGE HEADER ── */
 .page-hdr {
   display: flex;
