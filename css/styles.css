@@ -340,19 +340,28 @@ tbody tr:last-child td { border-bottom: none; }
 }
 
 .cross-win {
-  background: rgba(26, 92, 46, 0.12);
-  color: var(--green);
-  font-weight: 600;
+  background: #27ae60;
+  color: white;
+}
+
+.cross-good {  /* Kun 0,5 > keskinäisten pelien voittoprosentti > 1 */
+  background: #8bc34a;
+  color: #1e1e1e;
 }
 
 .cross-draw {
-  background: rgba(184, 150, 46, 0.12);
-  color: var(--gold);
+  background: #ffeb3b;
+  color: #333;
+}
+
+.cross-bad {  /* Kun 0 > keskinäisten pelien voittoprosentti > 0,5 */
+  background: #ff9800;
+  color: #1e1e1e;
 }
 
 .cross-loss {
-  background: rgba(139, 32, 32, 0.12);
-  color: var(--red);
+  background: #c0392b;
+  color: white;
 }
 
 /* ── PLAYER IMPORT ── */

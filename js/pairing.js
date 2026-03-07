@@ -5,8 +5,30 @@ function findByeCandidate(players, byes) {
 
 // MUUTOS: createRound() – ryhmittely ja ryhmäkohtainen paritus
 function createRound() {
+
   const active = appState.players.filter(p => p.active);
   if (active.length < 2) return showModal('Virhe', 'Tarvitaan vähintään 2 pelaajaa.');
+
+  const gamesPerPair = appState.cfg.gamesPerPair || 1;
+  const currentRoundIndex = appState.rounds.length; // 0 = ensimmäinen kierros
+  
+  // Tarkistetaan tulisiko pelaajien pelata uusintaottelu vaihtovärein.
+  if (currentRoundIndex % gamesPerPair !== 0) {
+    const prevPairs = appState.rounds[currentRoundIndex - 1].pairs;
+    const reversedColorsPairs = prevPairs.map(pair => {
+      if (pair.bId === null) {
+        return { ...pair }; // Bye pysyy samana (ei vaihdeta väriäkään)
+      }
+
+      return { wId: pair.bId, bId: pair.wId, res: null, group: pair.group };
+    });
+
+    appState.rounds.push({ pairs: reversedColorsPairs });
+    appState.view = appState.rounds.length - 1;
+    autoSave();
+    render();
+    return; // lopetetaan tähän – ei uutta paritusta
+  }
 
   const sc = calcScores(), col = calcColors(), opp = calcOpponents(), byes = calcByes();
 

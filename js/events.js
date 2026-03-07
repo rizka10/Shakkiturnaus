@@ -1,3 +1,4 @@
+// ── TAB-VAIHTO ───────────────────────────────────────────────────────────────
 document.querySelectorAll('.tab').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
@@ -8,8 +9,10 @@ document.querySelectorAll('.tab').forEach(btn => {
   });
 });
 
+// ── UUSI KIERROS ──────────────────────────────────────────────────────────────
 document.getElementById('btn-new-round').addEventListener('click', () => {
-  readCfgFields();
+  readCfgFields();  // lukee kaikki cfg-kentät appStateen
+
   if (appState.rounds.length > 0) {
     const last = appState.rounds[appState.rounds.length - 1];
     const missing = last.pairs.filter(p => p.res === null).length;
@@ -37,8 +40,11 @@ function showPage(id) {
   render();
 }
 
+// ── POISTA KIERROS ────────────────────────────────────────────────────────────
 document.getElementById('btn-delete-round').addEventListener('click', () => {
   const n = appState.rounds.length;
+  if (n === 0) return;
+
   showModal('Poista kierros ' + n,
     `Poistetaanko kierros ${n} ja kaikki sen tulokset?`,
     () => {
@@ -50,13 +56,24 @@ document.getElementById('btn-delete-round').addEventListener('click', () => {
   );
 });
 
-document.getElementById('btn-save').addEventListener('click', () => { readCfgFields(); saveBackup(); });
-document.getElementById('btn-load').addEventListener('click', () => document.getElementById('file-input').click());
+// ── MUUT PAINIKKEET ───────────────────────────────────────────────────────────
+document.getElementById('btn-save').addEventListener('click', () => {
+  readCfgFields();
+  saveBackup();
+});
+
+document.getElementById('btn-load').addEventListener('click', () => {
+  document.getElementById('file-input').click();
+});
+
 document.getElementById('file-input').addEventListener('change', loadBackupFile);
 
 document.getElementById('btn-reset').addEventListener('click', () => {
   showModal('Nollaa kaikki', 'Poistetaan kaikki pelaajat, kierrokset ja tulokset. Tätä ei voi peruuttaa.', () => {
-    appState.players = []; appState.rounds = []; appState.view = 0; _nextId = 1;
+    appState.players = [];
+    appState.rounds = [];
+    appState.view = 0;
+    _nextId = 1;
     localStorage.removeItem('shakkiTurnaus_v2');
     render();
   });
@@ -89,19 +106,32 @@ document.getElementById('btn-add-player').addEventListener('click', () => {
   const rstr   = prompt('Rating (0 = ei ratingia):', '0');
   const rating = parseInt(rstr, 10) || 0;
   const club   = prompt('Seura (valinnainen):', '') || '';
-  const group  = prompt('Ryhmä (esim. A, tyhjä = oletus):', '').toUpperCase() || '';
-  appState.players.push(createPlayer(name.trim(), rating, club, true, group));
+  const group  = prompt('Ryhmä (esim. A, tyhjä = oletus):', '').trim().toUpperCase() || '';
+  
+  appState.players.push({
+    id: freshId(),
+    name: name.trim(),
+    rating,
+    club,
+    active: true,
+    group   // nyt group lisätään aina, vaikka tyhjä string
+  });
   autoSave();
   render();
 });
 
 document.getElementById('btn-clear-players').addEventListener('click', () => {
   showModal('Tyhjennä pelaajat', 'Poistetaan kaikki pelaajat ja tulokset?', () => {
-    appState.players = []; appState.rounds = []; appState.view = 0; _nextId = 1;
-    autoSave(); render();
+    appState.players = [];
+    appState.rounds = [];
+    appState.view = 0;
+    _nextId = 1;
+    autoSave();
+    render();
   });
 });
 
+// ── CONFIG-KENTTIEN KUUNTELU ──────────────────────────────────────────────────
 const configFields = [
   { id: 'cfg-name',          type: 'text',   default: 'Shakkiturnaus' },
   { id: 'cfg-rounds',        type: 'number', default: 7, min: 1 },
@@ -109,45 +139,65 @@ const configFields = [
   { id: 'cfg-bye',           type: 'number', default: 1.0, min: 0, step: 0.5 }
 ];
 
-// Yksi yhteinen tallennusfunktio
 function updateConfigFromField(id) {
-  const field = configFields.find(f => f.id === id);
-  if (!field) return;
-
-  const input = document.getElementById(id);
-  if (!input) return;
-
-  let value = input.value.trim();
-
-  if (field.type === 'number') {
-    const num = parseFloat(value); // parseFloat → cfg-bye voi olla 0.5
-    value = isNaN(num) || num < field.min ? field.default : num;
-  } else {
-    value = value || field.default;
+  if (typeof id !== 'string') {
+    console.error('updateConfigFromField sai ei-string-arvon:', id);
+    return;
   }
 
-  // Muutetaan appStatea
-  const key = id.replace('cfg-', ''); // cfg-rounds → rounds
-  appState.cfg[key] = value;
+  const input = document.getElementById(id);
+  if (!input) {
+    console.warn('Input-kenttää ei löydy id:llä:', id);
+    return;
+  }
 
+  // Estä gamesPerPair-muutos kun turnaus alkanut
+  if (id === 'cfg-games-per-pair' && appState.rounds.length > 0) {
+    showModal('Ei sallittu', 'Pelejä per vastustaja -arvoa ei voi muuttaa kun turnaus on alkanut.');
+    input.value = appState.cfg.gamesPerPair;  // palautetaan vanha arvo
+    return;
+  }
+
+  let value;
+
+  if (id === 'cfg-name') {
+    value = input.value.trim() || 'Shakkiturnaus';
+  } else if (id === 'cfg-rounds') {
+    const val = parseInt(input.value, 10);
+    value = isNaN(val) || val < 1 ? 7 : val;
+  } else if (id === 'cfg-games-per-pair') {
+    const val = parseInt(input.value, 10);
+    value = isNaN(val) || val < 1 ? 1 : val;
+  } else if (id === 'cfg-bye') {
+    const val = parseFloat(input.value);
+    value = isNaN(val) || val < 0 ? 1.0 : val;
+  } else {
+    console.warn('Tuntematon kenttä:', id);
+    return;
+  }
+
+  const key = id.replace('cfg-', '');
+
+  appState.cfg[key] = value;
   autoSave();
-  render();  // turvallisinta päivittää koko näkymä eikä vain sivupalkkia
+  render();  // koko näkymä päivittyy
 }
 
-// Lisää kuuntelijat kerran, kutsutaan pääohjelman lopussa
 function setupConfigListeners() {
   configFields.forEach(field => {
     const input = document.getElementById(field.id);
-    if (!input) return;
+    if (!input) {
+      console.warn(`Kenttää ei löydy: ${field.id}`);
+      return;
+    }
 
-    // 'input' numerokentille (reaaliaikainen), 'change' tekstikentille
     const eventType = field.type === 'number' ? 'input' : 'change';
 
     input.addEventListener(eventType, () => {
       updateConfigFromField(field.id);
     });
 
-    // Alusta kentän arvo nykyisestä appState:sta
+    // Alusta arvo
     const key = field.id.replace('cfg-', '');
     input.value = appState.cfg[key] ?? field.default;
   });

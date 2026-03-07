@@ -201,7 +201,7 @@ function renderStandings() {
         const pair = rnd.pairs.find(p => p.wId === pid || p.bId === pid);
         if (!pair) return '<span class="hc u">·</span>';
         if (pair.bId === null) return '<span class="hc B">B</span>';
-        if (pair.res == null) return '<span class="hc u">?</span>';
+        if (pair.res === null) return '<span class="hc u">?</span>';
         const isWhite = pair.wId === pid;
         if (pair.res === 'D') return '<span class="hc D">T</span>';
         const won = (isWhite && pair.res === '1') || (!isWhite && pair.res === '0');
@@ -297,58 +297,54 @@ function renderCross() {
 
       groupPlayers.forEach((playerCol, colIdx) => {
         if (rowIdx === colIdx) {
-          // Itseään vastaan → tyhjä tai -
           html += '<td class="cross-empty">-</td>';
           return;
         }
 
         // Etsi ottelut näiden kahden välillä (kaikki kierrokset)
-        let result = null;
         let games = 0;
-        let wins = 0, draws = 0, losses = 0;
+        let points = 0;
+        let display = '';   // ruudussa näytetään str-muodossa pelitulokset (esim "1½1")
 
         appState.rounds.forEach(round => {
           round.pairs.forEach(pair => {
-            // Tarkista molemmat suunnat (valkoinen/musta)
-            if ((pair.wId === playerRow.id && pair.bId === playerCol.id) ||
-                (pair.wId === playerCol.id && pair.bId === playerRow.id)) {
-              games++;
-              if (pair.res !== null) {
-                if (pair.res === '1') { // 1 = valkoinen voitti
-                  if (pair.wId === playerRow.id) wins++; else losses++;
-                } else if (pair.res === 'D') {
-                  draws++;
-                } else if (pair.res === '0') { // 0 = musta voitti
-                  if (pair.wId === playerRow.id) losses++; else wins++;
-                }
-              }
+            if (pair.res === null) {return;}
+
+            let isWhite = null;
+            if (pair.wId === playerRow.id && pair.bId === playerCol.id) {
+              isWhite = true;
+            } else if (pair.wId === playerCol.id && pair.bId === playerRow.id) {
+              isWhite = false;
+            } else {
+              return;
+            }
+            
+            games++;
+
+            if (pair.res === '1') {
+              const char = isWhite ? '1' : '0';
+              display += char;
+              points += isWhite ? 1 : 0;
+            } else if (pair.res === '0') {
+              const char = isWhite ? '0' : '1';
+              display += char;
+              points += isWhite ? 0 : 1;
+            } else if (pair.res === 'D') {
+              display += '½';
+              points += 0.5;
             }
           });
         });
 
-        if (games === 0) {
-          html += '<td class="cross-none"></td>'; // Ei pelattu
-        } else {
-          // Näytä yhteistulos (esim. 1½–½ tai 1–0 jos yksi peli)
-          const scoreForRow = wins + 0.5 * draws;
-          const scoreForCol = losses + 0.5 * draws; // symmetrinen
-          let display = '';
-          if (scoreForRow > scoreForCol) display = '1';
-          else if (scoreForRow < scoreForCol) display = '0';
-          else display = '½';
+        let cls = '';
+        if (games === 0) { cls = 'cross-none' }
+        else if (points === games) { cls = 'cross-win' }
+        else if (points / games > 0.5) { cls = 'cross-good' }
+        else if (points === games / 2) { cls = 'cross-draw' }
+        else if (points / games > 0) { cls = 'cross-bad' }
+        else cls = 'cross-loss';
 
-          // Jos useita pelejä, näytä tarkempi (esim. 2–0 tai 1½–½)
-          if (games > 1) {
-            display = `${scoreForRow.toString().replace('.5', '½')}–${scoreForCol.toString().replace('.5', '½')}`;
-          }
-
-          let cls = '';
-          if (scoreForRow > scoreForCol) cls = 'cross-win';
-          else if (scoreForRow < scoreForCol) cls = 'cross-loss';
-          else cls = 'cross-draw';
-
-          html += `<td class="${cls}">${display}</td>`;
-        }
+        html += `<td class="${cls}">${display}</td>`;
       });
 
       html += '</tr>';

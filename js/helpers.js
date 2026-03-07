@@ -1,5 +1,5 @@
 function fmtScore(n) {
-  if (n == null) return '—';
+  if (n === null) return '—';
   if (n === Math.floor(n)) return String(n);
   // n is x.5
   const whole = Math.floor(n);

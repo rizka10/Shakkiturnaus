@@ -36,6 +36,13 @@
       <input id="cfg-rounds" type="number" value="7" min="1" max="30">
     </div>
     <div class="s-field">
+      <label for="cfg-games-per-pair">Pelejä kutakin vastaan</label>
+      <input type="number" id="cfg-games-per-pair" min="1" max="6" value="1" step="1">
+      <div class="hint" style="font-size:11px; color:var(--muted); margin-top:4px;">
+        Jos >1, sama vastustaja pelataan useita kertoja ennen uusien parien muodostamista.
+      </div>
+    </div>
+    <div class="s-field">
       <label>Bye-pisteet</label>
       <select id="cfg-bye">
         <option value="1" selected>1 piste</option>

@@ -37,7 +37,7 @@ function calcBuchholz(sc, groupPlayers = appState.players) {
 
   appState.rounds.forEach(rnd => {
     rnd.pairs.forEach(pair => {
-      if (pair.bId === null || pair.res == null) return; // bye ignored in BH (or add bye score)
+      if (pair.bId === null || pair.res === null) return; // bye ignored in BH (or add bye score)
       const wInGroup = groupPlayers.some(p => p.id === pair.wId);
       const bInGroup = groupPlayers.some(p => p.id === pair.bId);
       if (wInGroup && bInGroup) {
@@ -56,7 +56,7 @@ function calcSB(sc, groupPlayers = appState.players) {
 
   appState.rounds.forEach(rnd => {
     rnd.pairs.forEach(pair => {
-      if (pair.bId === null || pair.res == null) return;
+      if (pair.bId === null || pair.res === null) return;
       const wInGroup = groupPlayers.some(p => p.id === pair.wId);
       const bInGroup = groupPlayers.some(p => p.id === pair.bId);
 

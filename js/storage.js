@@ -64,5 +64,7 @@ function syncCfgFields() {
 function readCfgFields() {
   appState.cfg.name   = document.getElementById('cfg-name').value.trim() || 'Shakkiturnaus';
   appState.cfg.rounds = parseInt(document.getElementById('cfg-rounds').value, 10) || 7;
+  const gamesVal = parseInt(document.getElementById('cfg-games-per-pair').value, 10);
+  appState.cfg.gamesPerPair = isNaN(gamesVal) || gamesVal < 1 ? 1 : gamesVal;
   appState.cfg.bye    = parseFloat(document.getElementById('cfg-bye').value) || 1.0;
 }
