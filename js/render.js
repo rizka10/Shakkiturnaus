@@ -46,100 +46,52 @@ function renderSidebar() {
 }
 
 function renderPairings() {
-  const R = appState.rounds.length;
-  const sub = document.getElementById('pairings-sub');
-  sub.textContent = R === 0 ? '' : `Kierros ${appState.view+1} / ${appState.cfg.rounds}`;
-
-  const scoresBefore = calcScores(appState.view);
-
-  const tabsEl = document.getElementById('round-tabs');
-  tabsEl.innerHTML = appState.rounds.map((_, i) =>
-    `<button class="rtab${i===appState.view?' active':''}" onclick="switchView(${i})">K${i+1}</button>`
-  ).join('');
-
   const body = document.getElementById('pairings-body');
+  if (!body) return;
+
+  body.innerHTML = '';
+
+  const R = appState.rounds.length;
+
+  // Päivitä alaotsikko
+  const subEl = document.getElementById('pairings-sub');
+  if (subEl) {
+    subEl.textContent = R === 0 
+      ? '' 
+      : `Kierros ${appState.view + 1} / ${appState.cfg.rounds}`;
+  }
 
   if (R === 0) {
-    body.innerHTML = '<div class="msg">Ei parituksia. Lisää pelaajat ja luo kierros vasemmalta.</div>';
+    body.appendChild(createMessage("Lisää pelaajat Pelaajat-välilehdeltä ja luo paritukset vasemmalta."));
     return;
   }
 
+  const fragment = document.createDocumentFragment();
   const rnd = appState.rounds[appState.view];
-  const pairsByGroup = {};
-  rnd.pairs.forEach(pair => {
-    const grp = pair.group || 'DEFAULT';
-    if (!pairsByGroup[grp]) pairsByGroup[grp] = [];
-    pairsByGroup[grp].push(pair);
-  });
+  const scoresBefore = calcScores(appState.view);
 
-  let html = '';
-  Object.keys(pairsByGroup).sort().forEach(grp => {
-    html += `<div class="group-hdr">${grp === 'DEFAULT' ? 'Oletusryhmä' : `Ryhmä ${grp}`}</div>`;
-    pairsByGroup[grp].forEach((pair, idx) => {
-      const globalIdx = rnd.pairs.findIndex(p => 
-        p.wId === pair.wId && 
-        p.bId === pair.bId && 
-        (p.group || 'DEFAULT') === (pair.group || 'DEFAULT')
-      );
+  // Ryhmittele parit
+  const pairsByGroup = groupPairsByGroup(rnd.pairs);
 
-      if (pair.bId === null) {
-        const p = playerById(pair.wId);
-        const r = pair.res; // Nyt voi olla '1', 'D', '0' tai null
+  Object.keys(pairsByGroup)
+    .sort()
+    .forEach(groupKey => {
+      fragment.appendChild(createGroupHeader(groupKey));
 
-        html += `<div class="pairing-row">
-          <div class="board-n">${idx+1}</div>
-          
-          <div class="player-cell right">
-            <span class="pts-before">${fmtScore(scoresBefore[pair.wId] || 0)}</span>
-            <span class="player-name">${p?.name||'?'} <span class="bye-tag">(BYE)</span></span>
-            <span class="color-pip white-pip"></span>
-          </div>
-          
-          <div class="vs-cell">vs</div>
-          
-          <div class="player-cell">
-            <span class="color-pip"></span> <!-- tyhjä musta -->
-            <span class="player-name bye-opponent">—</span>
-            <span class="pts-before"></span>
-          </div>
-          
-          <div class="result-btns">
-            <button class="rbtn${r==='1'?' sel-w':''}" onclick="setRes(${appState.view},${globalIdx},'1')" title="Valkoinen saa pisteen">1–0</button>
-            <button class="rbtn${r==='D'?' sel-d':''}" onclick="setRes(${appState.view},${globalIdx},'D')" title="½ pistettä bye:stä">½–½</button>
-            <button class="rbtn${r==='0'?' sel-l':''}" onclick="setRes(${appState.view},${globalIdx},'0')" title="Ei pisteitä (harvinainen)">0–1</button>
-          </div>
-        </div>`;
-        return;
-      }
+      pairsByGroup[groupKey].forEach((pair, localIdx) => {
+        // TÄRKEÄÄ: Haetaan globaali indeksi rnd.pairs-taulukosta
+        const globalIdx = rnd.pairs.findIndex(p => 
+          p.wId === pair.wId && 
+          p.bId === pair.bId && 
+          (p.group || 'DEFAULT') === (pair.group || 'DEFAULT')
+        );
 
-      const w = playerById(pair.wId);
-      const b = playerById(pair.bId);
-      const r = pair.res;
-
-      html += `<div class="pairing-row">
-        <div class="board-n">${idx+1}</div>
-        <div class="player-cell right">
-          <span class="player-name">${w?.name||'?'}</span>
-          <span class="pts-before">${fmtScore(scoresBefore[w?.id] || 0)}</span>
-          <span class="color-pip white-pip"></span>
-        </div>
-        <div class="vs-cell">vs</div>
-        <div class="player-cell">
-          <span class="color-pip black-pip"></span>
-          <span class="player-name">${b?.name||'?'}</span>
-          <span class="pts-before">${fmtScore(scoresBefore[b?.id] || 0)}</span>
-        </div>
-        <div class="result-btns">
-          <button class="rbtn${r==='1'?' sel-w':''}" onclick="setRes(${appState.view},${globalIdx},'1')" title="Valkoinen voittaa">1–0</button>
-          <button class="rbtn${r==='D'?' sel-d':''}" onclick="setRes(${appState.view},${globalIdx},'D')" title="Tasapeli">½–½</button>
-          <button class="rbtn${r==='0'?' sel-l':''}" onclick="setRes(${appState.view},${globalIdx},'0')" title="Musta voittaa">0–1</button>
-        </div>
-      </div>`;
+        const row = createPairingRow(pair, localIdx, scoresBefore, appState.view, globalIdx);
+        fragment.appendChild(row);
+      });
     });
-  });
 
-  html += '</div>';
-  body.innerHTML = html;
+  body.appendChild(fragment);
 }
 
 function switchView(i) {
