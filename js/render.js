@@ -110,78 +110,42 @@ function setRes(roundIdx, pairIdx, res) {
 
 // ── STANDINGS PAGE ──
 function renderStandings() {
-  const sc = calcScores();
-  const elos = calcElo(); // Lisää tämä, jos haluat näyttää reaaliaikaiset Elot
+  const body = document.getElementById('standings-body');
+  if (!body) return;
 
-  // Ryhmittely
-  const groups = {};
-  appState.players.filter(p => p.active).forEach(p => {
-    const grp = (p.group || '').trim().toUpperCase() || 'DEFAULT';
-    if (!groups[grp]) groups[grp] = [];
-    groups[grp].push(p);
-  });
+  body.innerHTML = '';
 
-  let html = '';
+  const activePlayers = appState.players.filter(p => p.active);
+  if (activePlayers.length === 0) {
+    body.appendChild(createMessage("Ei aktiivisia pelaajia."));
+    return;
+  }
 
-  Object.keys(groups).sort().forEach(grpKey => {
-    let groupPlayers = groups[grpKey];
+  const fragment = document.createDocumentFragment();
+  const scores = calcScores();
+  const buchholz = calcBuchholz(scores);
+  const sonneborn = calcSB(scores);
+  const elos = calcElo();
+
+  // Ryhmittele pelaajat ryhmän mukaan
+  const groups = groupPlayersByGroup(activePlayers);
+
+  Object.keys(groups).sort().forEach(groupKey => {
+    const groupPlayers = groups[groupKey];
     if (groupPlayers.length === 0) return;
 
-    const bh = calcBuchholz(sc, groupPlayers);
-    const sb = calcSB(sc, groupPlayers);
+    // Ryhmän otsikko
+    fragment.appendChild(createStandingsGroupHeader(groupKey, groupPlayers.length));
 
-    // Lajittelu: pisteet > buchholz > sonneborn-berger
-    const sorted = groupPlayers.slice().sort((a, b) => {
-      const ds = (sc[b.id] || 0) - (sc[a.id] || 0);
-      if (Math.abs(ds) > 0.001) return ds;
-      const db = (bh[b.id] || 0) - (bh[a.id] || 0);
-      if (Math.abs(db) > 0.001) return db;
-      return (sb[b.id] || 0) - (sb[a.id] || 0);
-    });
+    // Lajittele pelaajat: pisteet → Buchholz → Sonneborn-Berger
+    const sortedPlayers = sortPlayersForStandings(groupPlayers, scores, buchholz, sonneborn);
 
-    const groupName = grpKey === 'DEFAULT' ? 'Oletusryhmä' : `Ryhmä ${grpKey}`;
-    html += `<div class="group-hdr">${groupName} (${sorted.length} pelaajaa)</div>`;
-
-    if (sorted.length === 0) {
-      html += '<div class="msg">Ei pelaajia tässä ryhmässä.</div>';
-      return;
-    }
-
-    // Pelaajahistoria-funktio (voit siirtää uloskin)
-    function playerHistory(pid) {
-      return appState.rounds.map(rnd => {
-        const pair = rnd.pairs.find(p => p.wId === pid || p.bId === pid);
-        if (!pair) return '<span class="hc u">·</span>';
-        if (pair.bId === null) return '<span class="hc B">B</span>';
-        if (pair.res === null) return '<span class="hc u">?</span>';
-        const isWhite = pair.wId === pid;
-        if (pair.res === 'D') return '<span class="hc D">T</span>';
-        const won = (isWhite && pair.res === '1') || (!isWhite && pair.res === '0');
-        return `<span class="hc ${won ? 'W' : 'L'}">${won ? 'V' : 'H'}</span>`;
-      }).join('');
-    }
-
-    html += '<table><thead><tr>' +
-      '<th>#</th><th>Nimi</th><th>Rating</th><th>Pisteet</th><th>BH</th><th>SB</th><th>Historia</th>' +
-      '</tr></thead><tbody>';
-
-    sorted.forEach((p, i) => {
-      html += `<tr>
-        <td class="td-num">${i+1}</td>
-        <td class="td-name">${p.name}</td>
-        <td class="td-rating">${p.rating || '—'} (${elos[p.id] || '—'})</td>
-        <td class="td-score">${fmtScore(sc[p.id] || 0)}</td>
-        <td class="td-muted">${fmtScore(bh[p.id] || 0)}</td>
-        <td class="td-muted">${fmtScore(sb[p.id] || 0)}</td>
-        <td><div class="hist">${playerHistory(p.id)}</div></td>
-      </tr>`;
-    });
-
-    html += '</tbody></table>';
+    // Luo taulukko
+    const table = createStandingsTable(sortedPlayers, scores, buchholz, sonneborn, elos);
+    fragment.appendChild(table);
   });
 
-  const body = document.getElementById('standings-body');
-  body.innerHTML = html || '<div class="msg">Ei aktiivisia pelaajia.</div>';
+  body.appendChild(fragment);
 }
 
 // ── CROSS TABLE ──

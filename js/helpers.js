@@ -68,6 +68,10 @@ function initModalListeners() {
 // Apufunktiot DocumentFragment-rakenteluun 
 // ═══════════════════════════════════════════════════════
 
+
+// ═══════════════════════════════════════════════════════
+// Yleiset:
+// ═══════════════════════════════════════════════════════
 function createMessage(text) {
   const div = document.createElement('div');
   div.className = 'msg';
@@ -75,6 +79,9 @@ function createMessage(text) {
   return div;
 }
 
+// ═══════════════════════════════════════════════════════
+// createPairings:
+// ═══════════════════════════════════════════════════════
 function createGroupHeader(groupKey) {
   const div = document.createElement('div');
   div.className = 'group-hdr';
@@ -210,6 +217,150 @@ function createResultButtons(pair, roundIdx, globalPairIdx, currentRes) {
 
   return container;
 }
+
+// ═══════════════════════════════════════════════════════
+// createStandings()
+// ═══════════════════════════════════════════════════════
+function groupPlayersByGroup(players) {
+  const groups = {};
+  players.forEach(player => {
+    const key = (player.group || '').trim().toUpperCase() || 'DEFAULT';
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(player);
+  });
+  return groups;
+}
+
+function createStandingsGroupHeader(groupKey, count) {
+  const div = document.createElement('div');
+  div.className = 'group-hdr';
+  div.textContent = `${groupKey === 'DEFAULT' ? 'Oletusryhmä' : `Ryhmä ${groupKey}`} (${count} pelaajaa)`;
+  return div;
+}
+
+function sortPlayersForStandings(players, scores, buchholz, sonneborn) {
+  return [...players].sort((a, b) => {
+    const scoreDiff = (scores[b.id] || 0) - (scores[a.id] || 0);
+    if (Math.abs(scoreDiff) > 0.001) return scoreDiff;
+
+    const bhDiff = (buchholz[b.id] || 0) - (buchholz[a.id] || 0);
+    if (Math.abs(bhDiff) > 0.001) return bhDiff;
+
+    return (sonneborn[b.id] || 0) - (sonneborn[a.id] || 0);
+  });
+}
+
+function createStandingsTable(players, scores, buchholz, sonneborn, elos) {
+  const table = document.createElement('table');
+
+  // Otsikkorivi
+  const thead = document.createElement('thead');
+  const headerRow = document.createElement('tr');
+  const headers = ['#', 'Nimi', 'Rating', 'Pisteet', 'BH', 'SB', 'Historia'];
+
+  headers.forEach(text => {
+    const th = document.createElement('th');
+    th.textContent = text;
+    headerRow.appendChild(th);
+  });
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  // Runko
+  const tbody = document.createElement('tbody');
+
+  players.forEach((player, index) => {
+    const row = document.createElement('tr');
+
+    // Sija
+    const rankTd = document.createElement('td');
+    rankTd.className = 'td-num';
+    rankTd.textContent = (index + 1).toString();
+    row.appendChild(rankTd);
+
+    // Nimi
+    const nameTd = document.createElement('td');
+    nameTd.className = 'td-name';
+    nameTd.textContent = player.name;
+    row.appendChild(nameTd);
+
+    // Rating + uusi Elo
+    const ratingTd = document.createElement('td');
+    ratingTd.className = 'td-rating';
+    const currentRating = player.rating || '—';
+    const newElo = elos[player.id] || '—';
+    ratingTd.textContent = `${currentRating} (${newElo})`;
+    row.appendChild(ratingTd);
+
+    // Pisteet
+    const scoreTd = document.createElement('td');
+    scoreTd.className = 'td-score';
+    scoreTd.textContent = fmtScore(scores[player.id] || 0);
+    row.appendChild(scoreTd);
+
+    // Buchholz
+    const bhTd = document.createElement('td');
+    bhTd.className = 'td-muted';
+    bhTd.textContent = fmtScore(buchholz[player.id] || 0);
+    row.appendChild(bhTd);
+
+    // Sonneborn-Berger
+    const sbTd = document.createElement('td');
+    sbTd.className = 'td-muted';
+    sbTd.textContent = fmtScore(sonneborn[player.id] || 0);
+    row.appendChild(sbTd);
+
+    // Pelihistoria
+    const histTd = document.createElement('td');
+    histTd.appendChild(createPlayerHistory(player.id));
+    row.appendChild(histTd);
+
+    tbody.appendChild(row);
+  });
+
+  table.appendChild(tbody);
+  return table;
+}
+
+function createPlayerHistory(playerId) {
+  const container = document.createElement('div');
+  container.className = 'hist';
+
+  appState.rounds.forEach(round => {
+    const pair = round.pairs.find(p => p.wId === playerId || p.bId === playerId);
+    
+    const span = document.createElement('span');
+    span.className = 'hc';
+
+    if (!pair) {
+      span.classList.add('u');
+      span.textContent = '·';
+    } 
+    else if (pair.bId === null) {
+      span.classList.add('B');
+      span.textContent = 'B';
+    } 
+    else if (pair.res === null) {
+      span.classList.add('u');
+      span.textContent = '?';
+    } 
+    else if (pair.res === 'D') {
+      span.classList.add('D');
+      span.textContent = 'T';
+    } 
+    else {
+      const isWhite = pair.wId === playerId;
+      const won = (isWhite && pair.res === '1') || (!isWhite && pair.res === '0');
+      span.classList.add(won ? 'W' : 'L');
+      span.textContent = won ? 'V' : 'H';
+    }
+
+    container.appendChild(span);
+  });
+
+  return container;
+}
+
 
 // Exportataan globaalisti perinteiseen tyyliin (window.)
 window.showModal = showModal;
