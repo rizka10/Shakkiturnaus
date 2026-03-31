@@ -1,10 +1,20 @@
 function render() {
   renderSidebar();
-  const active = document.querySelector('.tab.active')?.dataset.page || 'pairings';
-  if (active === 'pairings')   renderPairings();
-  if (active === 'standings')  renderStandings();
-  if (active === 'cross')      renderCross();
-  if (active === 'players')    renderPlayers();
+  const activePage = document.querySelector('.tab.active')?.dataset.page || 'pairings';
+  switch (activePage) {
+    case 'pairings':
+      renderPairings();
+      break;
+    case 'standings':
+      renderStandings();
+      break;
+    case 'cross':
+      renderCross();
+      break;
+    case 'players':
+      renderPlayers();
+      break;
+  }
 }
 
 // render.js
