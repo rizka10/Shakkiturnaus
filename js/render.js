@@ -409,11 +409,3 @@ function setGroup(id, val) {
     render();
   }
 }
-
-// LISÄYS: Funktio group-muutokselle (events.js hoitaa listenerin, mutta määrittele täällä)
-function setGroup(id, val) {
-  const p = playerById(id);
-  if (p) p.group = val.trim().toUpperCase();
-  autoSave();
-  render();
-}
