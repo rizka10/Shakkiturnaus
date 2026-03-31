@@ -10,7 +10,20 @@ function playerById(id) {
   return appState.players.find(p => p.id === id) || null;
 }
 
-// Lisää render.js-tiedoston alkuun tai helpers.js:ään
+function setGroup(id, val) {
+  if (appState.rounds.length > 0) {
+    console.warn('Ryhmän muutos estetty: turnaus on käynnissä');
+    return; 
+  }
+
+  const p = playerById(id);
+  if (p) {
+    p.group = val.trim().toUpperCase();
+    autoSave();
+    render();
+  }
+}
+
 function groupPairsByGroup(pairs) {
   const groups = {};
   pairs.forEach(pair => {
@@ -497,6 +510,107 @@ function createCrossCell(playerRowId, playerColId) {
   }
 
   return td;
+}
+
+// ═══════════════════════════════════════════════════════
+// renderPlayers:
+// ═══════════════════════════════════════════════════════
+
+function createEmptyPlayersRow() {
+  const tr = document.createElement('tr');
+  const td = document.createElement('td');
+  td.colSpan = 7;
+  td.className = 'td-muted';
+  td.style.textAlign = 'center';
+  td.style.padding = '20px';
+  td.textContent = 'Ei pelaajia. Lisää tai tuo pelaajat.';
+  tr.appendChild(td);
+  return tr;
+}
+
+function createPlayerRow(player, index, elos) {
+  const tr = document.createElement('tr');
+  if (!player.active) {
+    tr.style.opacity = '0.5';
+  }
+
+  // Sarake 1: Numero
+  const numTd = document.createElement('td');
+  numTd.className = 'td-num';
+  numTd.textContent = (index + 1).toString();
+  tr.appendChild(numTd);
+
+  // Sarake 2: Nimi
+  const nameTd = document.createElement('td');
+  nameTd.className = 'td-name';
+  nameTd.textContent = player.name;
+  tr.appendChild(nameTd);
+
+  // Sarake 3: Rating + uusi Elo
+  const ratingTd = document.createElement('td');
+  ratingTd.className = 'td-rating';
+  const currentRating = player.rating || '—';
+  const newElo = elos[player.id] || '—';
+  ratingTd.textContent = `${currentRating} (${newElo})`;
+  tr.appendChild(ratingTd);
+
+  // Sarake 4: Seura
+  const clubTd = document.createElement('td');
+  clubTd.className = 'td-muted';
+  clubTd.textContent = player.club || '';
+  tr.appendChild(clubTd);
+
+  // Sarake 5: Ryhmä (muokattava vain ennen turnauksen alkua)
+  const groupTd = document.createElement('td');
+  const groupInput = document.createElement('input');
+  groupInput.type = 'text';
+  groupInput.value = player.group || '';
+  groupInput.size = 3;
+  groupInput.style.fontFamily = 'JetBrains Mono, monospace';
+
+  if (appState.rounds.length > 0) {
+    groupInput.disabled = true;
+    groupInput.title = 'Ryhmää ei voi muuttaa kun turnaus on alkanut';
+  } else {
+    groupInput.addEventListener('blur', () => {
+      setGroup(player.id, groupInput.value);
+    });
+  }
+  groupTd.appendChild(groupInput);
+  tr.appendChild(groupTd);
+
+  // Sarake 6: Tila
+  const statusTd = document.createElement('td');
+  statusTd.className = 'td-muted';
+  statusTd.textContent = player.active ? 'Aktiivinen' : 'Ei pelaa';
+  tr.appendChild(statusTd);
+
+  // Sarake 7: Toiminnot
+  const actionsTd = document.createElement('td');
+  const btnContainer = document.createElement('div');
+  btnContainer.style.display = 'flex';
+  btnContainer.style.gap = '6px';
+
+  // Aktivoi / Poista käytöstä -nappi
+  const toggleBtn = document.createElement('button');
+  toggleBtn.className = 'btn btn-ghost btn-sm';
+  toggleBtn.textContent = player.active ? 'Poista käytöstä' : 'Aktivoi';
+  toggleBtn.addEventListener('click', () => toggleActive(player.id));
+  btnContainer.appendChild(toggleBtn);
+
+  // Poista-nappi (vain jos turnausta ei ole aloitettu)
+  if (appState.rounds.length === 0) {
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'btn btn-red btn-sm';
+    removeBtn.textContent = 'Poista';
+    removeBtn.addEventListener('click', () => removePlayer(player.id));
+    btnContainer.appendChild(removeBtn);
+  }
+
+  actionsTd.appendChild(btnContainer);
+  tr.appendChild(actionsTd);
+
+  return tr;
 }
 
 // Exportataan globaalisti perinteiseen tyyliin (window.)

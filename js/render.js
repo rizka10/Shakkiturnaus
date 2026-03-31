@@ -53,7 +53,6 @@ function renderPairings() {
 
   const R = appState.rounds.length;
 
-  // Päivitä alaotsikko
   const subEl = document.getElementById('pairings-sub');
   if (subEl) {
     subEl.textContent = R === 0 
@@ -70,7 +69,6 @@ function renderPairings() {
   const rnd = appState.rounds[appState.view];
   const scoresBefore = calcScores(appState.view);
 
-  // Ryhmittele parit
   const pairsByGroup = groupPairsByGroup(rnd.pairs);
 
   Object.keys(pairsByGroup)
@@ -102,7 +100,7 @@ function switchView(i) {
 
 function setRes(roundIdx, pairIdx, res) {
   const pair = appState.rounds[roundIdx].pairs[pairIdx];
-  pair.res = pair.res === res ? null : res; // toggle off if same
+  pair.res = pair.res === res ? null : res;
   autoSave();
   renderPairings();
   renderSidebar();
@@ -127,20 +125,16 @@ function renderStandings() {
   const sonneborn = calcSB(scores);
   const elos = calcElo();
 
-  // Ryhmittele pelaajat ryhmän mukaan
   const groups = groupPlayersByGroup(activePlayers);
 
   Object.keys(groups).sort().forEach(groupKey => {
     const groupPlayers = groups[groupKey];
     if (groupPlayers.length === 0) return;
 
-    // Ryhmän otsikko
     fragment.appendChild(createStandingsGroupHeader(groupKey, groupPlayers.length));
 
-    // Lajittele pelaajat: pisteet → Buchholz → Sonneborn-Berger
     const sortedPlayers = sortPlayersForStandings(groupPlayers, scores, buchholz, sonneborn);
 
-    // Luo taulukko
     const table = createStandingsTable(sortedPlayers, scores, buchholz, sonneborn, elos);
     fragment.appendChild(table);
   });
@@ -163,7 +157,6 @@ function renderCross() {
 
   const fragment = document.createDocumentFragment();
 
-  // Ryhmittele pelaajat ryhmien mukaan
   const groups = groupPlayersByGroup(activePlayers);
 
   Object.keys(groups).sort().forEach(groupKey => {
@@ -176,10 +169,8 @@ function renderCross() {
       return;
     }
 
-    // Ryhmän otsikko
     fragment.appendChild(createGroupHeaderForCross(groupKey, groupPlayers.length));
 
-    // Luo ristitaulukko
     const crossTable = createCrossTable(groupPlayers);
     fragment.appendChild(crossTable);
   });
@@ -189,54 +180,28 @@ function renderCross() {
 
 // ── PLAYERS PAGE ──
 function renderPlayers() {
-  const elos = calcElo();
   const tbody = document.getElementById('player-tbody');
   const countEl = document.getElementById('player-count');
+  if (!tbody || !countEl) return;
 
   const players = appState.players;
   countEl.textContent = players.filter(p => p.active).length;
 
+  tbody.innerHTML = '';
+
   if (players.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" class="td-muted" style="text-align:center;padding:20px">Ei pelaajia. Lisää tai tuo pelaajat.</td></tr>';
+    const row = createEmptyPlayersRow();
+    tbody.appendChild(row);
     return;
   }
 
-  tbody.innerHTML = players.map((p, i) => `
-    <tr style="opacity:${p.active ? 1 : 0.5}">
-      <td class="td-num">${i+1}</td>
-      <td class="td-name">${p.name}</td>
-      <td class="td-rating">${p.rating || '—'} (${elos[p.id] || '—'})</td>
-      <td class="td-muted">${p.club || ''}</td>
-      <td>
-        <input type="text" value="${p.group || ''}" size="3" 
-              ${appState.rounds.length > 0 ? 'disabled title="Ryhmää ei voi muuttaa kun turnaus on alkanut"' : ''}
-              onblur="if (${appState.rounds.length === 0}) setGroup(${p.id}, this.value)">
-      </td>
-      <td class="td-muted">${p.active ? 'Aktiivinen' : 'Ei pelaa'}</td>
-      <td>
-        <div style="display:flex;gap:6px">
-          <button class="btn btn-ghost btn-sm" onclick="toggleActive(${p.id})">
-            ${p.active ? 'Poista käytöstä' : 'Aktivoi'}
-          </button>
-          ${appState.rounds.length === 0 ? 
-            `<button class="btn btn-red btn-sm" onclick="removePlayer(${p.id})">Poista</button>` : ''}
-        </div>
-      </td>
-    </tr>
-  `).join('');
-}
+  const fragment = document.createDocumentFragment();
+  const elos = calcElo();
 
-// Korjattu setGroup – EI kutsu render() suoraan onchange:ssa, vaan renderöi vasta kun input menettää fokus (onblur)
-function setGroup(id, val) {
-  if (appState.rounds.length > 0) {
-    console.warn('Ryhmän muutos estetty: turnaus on käynnissä');
-    return; 
-  }
+  players.forEach((player, index) => {
+    const row = createPlayerRow(player, index, elos);
+    fragment.appendChild(row);
+  });
 
-  const p = playerById(id);
-  if (p) {
-    p.group = val.trim().toUpperCase();
-    autoSave();
-    render();
-  }
+  tbody.appendChild(fragment);
 }
