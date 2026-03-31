@@ -17,8 +17,6 @@ function render() {
   }
 }
 
-// render.js
-
 function renderSidebar() {
   const R = appState.rounds.length;
   const maxR = appState.cfg.rounds;
