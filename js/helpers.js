@@ -79,8 +79,18 @@ function createMessage(text) {
   return div;
 }
 
+function groupPlayersByGroup(players) {
+  const groups = {};
+  players.forEach(player => {
+    const key = (player.group || '').trim().toUpperCase() || 'DEFAULT';
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(player);
+  });
+  return groups;
+}
+
 // ═══════════════════════════════════════════════════════
-// createPairings:
+// renderPairings:
 // ═══════════════════════════════════════════════════════
 function createGroupHeader(groupKey) {
   const div = document.createElement('div');
@@ -219,17 +229,8 @@ function createResultButtons(pair, roundIdx, globalPairIdx, currentRes) {
 }
 
 // ═══════════════════════════════════════════════════════
-// createStandings()
+// renderStandings:
 // ═══════════════════════════════════════════════════════
-function groupPlayersByGroup(players) {
-  const groups = {};
-  players.forEach(player => {
-    const key = (player.group || '').trim().toUpperCase() || 'DEFAULT';
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(player);
-  });
-  return groups;
-}
 
 function createStandingsGroupHeader(groupKey, count) {
   const div = document.createElement('div');
@@ -361,6 +362,142 @@ function createPlayerHistory(playerId) {
   return container;
 }
 
+// ═══════════════════════════════════════════════════════
+// renderCross:
+// ═══════════════════════════════════════════════════════
+
+function createGroupHeaderForCross(groupKey, count = null) {
+  const div = document.createElement('div');
+  div.className = 'group-hdr';
+  const title = groupKey === 'DEFAULT' 
+    ? 'Oletusryhmä' 
+    : `Ryhmä ${groupKey}`;
+  div.textContent = count !== null ? `${title} (${count} pelaajaa)` : title;
+  return div;
+}
+
+function createCrossTable(groupPlayers) {
+  const table = document.createElement('table');
+  table.className = 'cross-table';
+
+  // Otsikkorivi (yläpalkki)
+  const thead = document.createElement('thead');
+  const headerRow = document.createElement('tr');
+
+  // Tyhjä vasen yläkulma
+  const cornerTh = document.createElement('th');
+  headerRow.appendChild(cornerTh);
+
+  // Pelaajien nimet sarakkeisiin
+  groupPlayers.forEach(player => {
+    const th = document.createElement('th');
+    const shortName = player.name.length > 18 
+      ? player.name.substring(0, 15) + '…' 
+      : player.name;
+    th.textContent = shortName;
+    th.title = player.name;
+    headerRow.appendChild(th);
+  });
+
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  // Runko (taulukon sisältö)
+  const tbody = document.createElement('tbody');
+
+  groupPlayers.forEach((rowPlayer, rowIdx) => {
+    const tr = document.createElement('tr');
+
+    // Vasen sarake: pelaajan nimi
+    const nameTh = document.createElement('th');
+    nameTh.textContent = rowPlayer.name;
+    nameTh.title = rowPlayer.name;
+    tr.appendChild(nameTh);
+
+    // Kohtaamiset sarakkeisiin
+    groupPlayers.forEach((colPlayer, colIdx) => {
+      if (rowIdx === colIdx) {
+        const td = document.createElement('td');
+        td.className = 'cross-empty';
+        td.textContent = '—';
+        tr.appendChild(td);
+        return;
+      }
+
+      const cell = createCrossCell(rowPlayer.id, colPlayer.id);
+      tr.appendChild(cell);
+    });
+
+    tbody.appendChild(tr);
+  });
+
+  table.appendChild(tbody);
+  return table;
+}
+
+function createCrossCell(playerRowId, playerColId) {
+  const td = document.createElement('td');
+
+  let games = 0;
+  let points = 0;
+  let display = '';
+
+  appState.rounds.forEach(round => {
+    round.pairs.forEach(pair => {
+      if (pair.res === null) return;
+
+      let isWhite = null;
+      if (pair.wId === playerRowId && pair.bId === playerColId) {
+        isWhite = true;
+      } else if (pair.wId === playerColId && pair.bId === playerRowId) {
+        isWhite = false;
+      } else {
+        return;
+      }
+
+      games++;
+
+      if (pair.res === '1') {
+        display += isWhite ? '1' : '0';
+        points += isWhite ? 1 : 0;
+      } else if (pair.res === '0') {
+        display += isWhite ? '0' : '1';
+        points += isWhite ? 0 : 1;
+      } else if (pair.res === 'D') {
+        display += '½';
+        points += 0.5;
+      }
+    });
+  });
+
+  // Määritä tyyliluokka tuloksen perusteella
+  if (games === 0) {
+    td.className = 'cross-none';
+    td.textContent = '';
+  } 
+  else if (points === games) {
+    td.className = 'cross-win';
+    td.textContent = display;
+  } 
+  else if (points / games > 0.5) {
+    td.className = 'cross-good';
+    td.textContent = display;
+  } 
+  else if (points === games / 2) {
+    td.className = 'cross-draw';
+    td.textContent = display;
+  } 
+  else if (points / games > 0) {
+    td.className = 'cross-bad';
+    td.textContent = display;
+  } 
+  else {
+    td.className = 'cross-loss';
+    td.textContent = display;
+  }
+
+  return td;
+}
 
 // Exportataan globaalisti perinteiseen tyyliin (window.)
 window.showModal = showModal;

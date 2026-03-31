@@ -149,127 +149,42 @@ function renderStandings() {
 }
 
 // ── CROSS TABLE ──
-// js/render.js
-// ... muut render-funktiot ennallaan ...
-
 function renderCross() {
   const container = document.getElementById('cross-body');
   if (!container) return;
 
+  container.innerHTML = '';
+
   const activePlayers = appState.players.filter(p => p.active);
   if (activePlayers.length === 0) {
-    container.innerHTML = '<p>Ei aktiivisia pelaajia.</p>';
+    container.appendChild(createMessage("Ei aktiivisia pelaajia."));
     return;
   }
 
-  // Ryhmittele aktiiviset pelaajat group-kentän mukaan (tyhjä → 'DEFAULT')
-  const groups = {};
-  activePlayers.forEach(p => {
-    const grp = (p.group || '').trim().toUpperCase() || 'DEFAULT';
-    if (!groups[grp]) groups[grp] = [];
-    groups[grp].push(p);
-  });
+  const fragment = document.createDocumentFragment();
 
-  let html = '';
+  // Ryhmittele pelaajat ryhmien mukaan
+  const groups = groupPlayersByGroup(activePlayers);
 
-  // Käy läpi jokainen ryhmä aakkosjärjestyksessä
-  Object.keys(groups).sort().forEach(grpKey => {
-    const groupPlayers = groups[grpKey];
+  Object.keys(groups).sort().forEach(groupKey => {
+    const groupPlayers = groups[groupKey];
+
     if (groupPlayers.length < 2) {
-      html += `<div class="group-hdr">${grpKey === 'DEFAULT' ? 'Oletusryhmä' : `Ryhmä ${grpKey}`}</div>
-               <p>Ryhmässä liian vähän pelaajia kohtaamistietoihin.</p>`;
+      fragment.appendChild(createGroupHeaderForCross(groupKey));
+      const msg = createMessage(`Ryhmässä ${groupKey === 'DEFAULT' ? 'oletus' : groupKey} on liian vähän pelaajia kohtaamistietoihin.`);
+      fragment.appendChild(msg);
       return;
     }
 
-    // Lajittele ryhmän pelaajat nimellä tai rating + nimellä (voit muuttaa)
-    groupPlayers.sort((a, b) => a.name.localeCompare(b.name));
+    // Ryhmän otsikko
+    fragment.appendChild(createGroupHeaderForCross(groupKey, groupPlayers.length));
 
-    // Luo pelaaja-ID → indeksi -mappi vain tälle ryhmälle (helpottaa taulukon indeksointia)
-    const playerIndex = {};
-    groupPlayers.forEach((p, idx) => {
-      playerIndex[p.id] = idx;
-    });
-
-    const groupName = grpKey === 'DEFAULT' ? 'Oletusryhmä (ei ryhmää)' : `Ryhmä ${grpKey}`;
-    html += `<div class="group-hdr">${groupName} (${groupPlayers.length} pelaajaa)</div>`;
-
-    // Aloita taulukko
-    html += '<table class="cross-table">';
-
-    // Yläreuna: tyhjä solu + pelaajien nimet (lyhennettynä jos pitkä)
-    html += '<thead><tr><th></th>';
-    groupPlayers.forEach(p => {
-      const shortName = p.name.length > 18 ? p.name.substring(0, 15) + '…' : p.name;
-      html += `<th title="${p.name}">${shortName}</th>`;
-    });
-    html += '</tr></thead>';
-
-    // Runko: rivit pelaajille
-    html += '<tbody>';
-    groupPlayers.forEach((playerRow, rowIdx) => {
-      html += '<tr>';
-      // Vasen sarake: pelaajan nimi (voit lisätä ratingin tms.)
-      html += `<th title="${playerRow.name}">${playerRow.name}</th>`;
-
-      groupPlayers.forEach((playerCol, colIdx) => {
-        if (rowIdx === colIdx) {
-          html += '<td class="cross-empty">-</td>';
-          return;
-        }
-
-        // Etsi ottelut näiden kahden välillä (kaikki kierrokset)
-        let games = 0;
-        let points = 0;
-        let display = '';   // ruudussa näytetään str-muodossa pelitulokset (esim "1½1")
-
-        appState.rounds.forEach(round => {
-          round.pairs.forEach(pair => {
-            if (pair.res === null) {return;}
-
-            let isWhite = null;
-            if (pair.wId === playerRow.id && pair.bId === playerCol.id) {
-              isWhite = true;
-            } else if (pair.wId === playerCol.id && pair.bId === playerRow.id) {
-              isWhite = false;
-            } else {
-              return;
-            }
-            
-            games++;
-
-            if (pair.res === '1') {
-              const char = isWhite ? '1' : '0';
-              display += char;
-              points += isWhite ? 1 : 0;
-            } else if (pair.res === '0') {
-              const char = isWhite ? '0' : '1';
-              display += char;
-              points += isWhite ? 0 : 1;
-            } else if (pair.res === 'D') {
-              display += '½';
-              points += 0.5;
-            }
-          });
-        });
-
-        let cls = '';
-        if (games === 0) { cls = 'cross-none' }
-        else if (points === games) { cls = 'cross-win' }
-        else if (points / games > 0.5) { cls = 'cross-good' }
-        else if (points === games / 2) { cls = 'cross-draw' }
-        else if (points / games > 0) { cls = 'cross-bad' }
-        else cls = 'cross-loss';
-
-        html += `<td class="${cls}">${display}</td>`;
-      });
-
-      html += '</tr>';
-    });
-
-    html += '</tbody></table>';
+    // Luo ristitaulukko
+    const crossTable = createCrossTable(groupPlayers);
+    fragment.appendChild(crossTable);
   });
 
-  container.innerHTML = html || '<p>Ei ryhmiä tai pelaajia.</p>';
+  container.appendChild(fragment);
 }
 
 // ── PLAYERS PAGE ──
