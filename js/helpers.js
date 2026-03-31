@@ -103,6 +103,39 @@ function groupPlayersByGroup(players) {
 }
 
 // ═══════════════════════════════════════════════════════
+// renderSidebar:
+// ═══════════════════════════════════════════════════════
+
+function updateStatBar(currentRounds) {
+  // Pelaajat
+  const activePlayers = appState.players.filter(p => p.active).length;
+  setStatValue('st-players', activePlayers);
+
+  // Kierrokset
+  setStatValue('st-rounds', currentRounds);
+
+  // Laudat (nykyinen kierros)
+  const lastRnd = appState.rounds[appState.view];
+  const boards = lastRnd 
+    ? lastRnd.pairs.filter(p => p.bId !== null).length 
+    : 0;
+  setStatValue('st-boards', boards);
+
+  // Valmiit tulokset (nykyinen kierros)
+  const done = lastRnd 
+    ? lastRnd.pairs.filter(p => p.res !== null).length 
+    : 0;
+  setStatValue('st-done', done);
+}
+
+function setStatValue(id, value) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.textContent = value;
+  }
+}
+
+// ═══════════════════════════════════════════════════════
 // renderPairings:
 // ═══════════════════════════════════════════════════════
 function createGroupHeader(groupKey) {

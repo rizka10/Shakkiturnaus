@@ -7,42 +7,49 @@ function render() {
   if (active === 'players')    renderPlayers();
 }
 
+// render.js
+
 function renderSidebar() {
   const R = appState.rounds.length;
   const maxR = appState.cfg.rounds;
-  const info = document.getElementById('sidebar-round-info');
 
-  if (R === 0) {
-    info.textContent = 'Pelaajia: ' + appState.players.filter(p=>p.active).length;
-  } else {
-    const lastRnd = appState.rounds[R-1];
-    const done = lastRnd.pairs.filter(p => p.res !== null).length;
-    const total = lastRnd.pairs.length;
-    info.textContent = `Kierros ${R}/${maxR} — ${done}/${total} tulosta`;
+  // Kierros-info
+  const infoEl = document.getElementById('sidebar-round-info');
+  if (infoEl) {
+    if (R === 0) {
+      const activeCount = appState.players.filter(p => p.active).length;
+      infoEl.textContent = `Pelaajia: ${activeCount}`;
+    } else {
+      const lastRnd = appState.rounds[R - 1];
+      const done = lastRnd.pairs.filter(p => p.res !== null).length;
+      const total = lastRnd.pairs.length;
+      infoEl.textContent = `Kierros ${R}/${maxR} — ${done}/${total} tulosta`;
+    }
   }
 
-  // Buttons
+  // "Luo uusi kierros" -nappi
   const btnNew = document.getElementById('btn-new-round');
   const delWrap = document.getElementById('btn-delete-round-wrap');
 
-  if (R >= maxR) {
-    btnNew.textContent = '✓ Turnaus valmis';
-    btnNew.disabled = true;
-    btnNew.className = 'btn btn-sm';
-  } else {
-    btnNew.textContent = R === 0 ? '▶ Aloita kierros 1' : `▶ Kierros ${R+1}`;
-    btnNew.disabled = false;
-    btnNew.className = 'btn btn-green';
+  if (btnNew) {
+    if (R >= maxR) {
+      btnNew.textContent = '✓ Turnaus valmis';
+      btnNew.disabled = true;
+      btnNew.className = 'btn btn-sm';
+    } else {
+      btnNew.textContent = R === 0 ? '▶ Aloita kierros 1' : `▶ Kierros ${R + 1}`;
+      btnNew.disabled = false;
+      btnNew.className = 'btn btn-green';
+    }
   }
 
-  delWrap.style.display = R > 0 ? 'block' : 'none';
+  // Poista kierros -nappulan näkyvyys
+  if (delWrap) {
+    delWrap.style.display = R > 0 ? 'block' : 'none';
+  }
 
-  // Stats
-  document.getElementById('st-players').textContent = appState.players.filter(p=>p.active).length;
-  document.getElementById('st-rounds').textContent  = R;
-  const lastRnd = appState.rounds[appState.view];
-  document.getElementById('st-boards').textContent  = lastRnd ? lastRnd.pairs.filter(p=>p.bId!==null).length : 0;
-  document.getElementById('st-done').textContent    = lastRnd ? lastRnd.pairs.filter(p=>p.res!==null).length : 0;
+  // Statistiikkapalkki
+  updateStatBar(R);
 }
 
 function renderPairings() {
