@@ -1,6 +1,8 @@
 function render() {
   renderSidebar();
+
   const activePage = document.querySelector('.tab.active')?.dataset.page || 'pairings';
+
   switch (activePage) {
     case 'pairings':
       renderPairings();
@@ -14,8 +16,13 @@ function render() {
     case 'players':
       renderPlayers();
       break;
+    // settings-sivu ei tarvitse renderöintiä
   }
 }
+
+// ═══════════════════════════════════════════════════════
+// Sidebar
+// ═══════════════════════════════════════════════════════
 
 function renderSidebar() {
   const R = appState.rounds.length;
@@ -60,6 +67,10 @@ function renderSidebar() {
   updateStatBar(R);
 }
 
+// ═══════════════════════════════════════════════════════
+// Pairings
+// ═══════════════════════════════════════════════════════
+
 function renderPairings() {
   const body = document.getElementById('pairings-body');
   if (!body) return;
@@ -92,7 +103,6 @@ function renderPairings() {
       fragment.appendChild(createGroupHeader(groupKey));
 
       pairsByGroup[groupKey].forEach((pair, localIdx) => {
-        // TÄRKEÄÄ: Haetaan globaali indeksi rnd.pairs-taulukosta
         const globalIdx = rnd.pairs.findIndex(p => 
           p.wId === pair.wId && 
           p.bId === pair.bId && 
@@ -107,21 +117,10 @@ function renderPairings() {
   body.appendChild(fragment);
 }
 
-function switchView(i) {
-  appState.view = i;
-  renderPairings();
-  renderSidebar();
-}
+// ═══════════════════════════════════════════════════════
+// Standings
+// ═══════════════════════════════════════════════════════
 
-function setRes(roundIdx, pairIdx, res) {
-  const pair = appState.rounds[roundIdx].pairs[pairIdx];
-  pair.res = pair.res === res ? null : res;
-  autoSave();
-  renderPairings();
-  renderSidebar();
-}
-
-// ── STANDINGS PAGE ──
 function renderStandings() {
   const body = document.getElementById('standings-body');
   if (!body) return;
@@ -146,10 +145,9 @@ function renderStandings() {
     const groupPlayers = groups[groupKey];
     if (groupPlayers.length === 0) return;
 
-    fragment.appendChild(createStandingsGroupHeader(groupKey, groupPlayers.length));
+    fragment.appendChild(createGroupHeader(groupKey, groupPlayers.length));
 
     const sortedPlayers = sortPlayersForStandings(groupPlayers, scores, buchholz, sonneborn);
-
     const table = createStandingsTable(sortedPlayers, scores, buchholz, sonneborn, elos);
     fragment.appendChild(table);
   });
@@ -157,7 +155,10 @@ function renderStandings() {
   body.appendChild(fragment);
 }
 
-// ── CROSS TABLE ──
+// ═══════════════════════════════════════════════════════
+// Cross Table
+// ═══════════════════════════════════════════════════════
+
 function renderCross() {
   const container = document.getElementById('cross-body');
   if (!container) return;
@@ -171,20 +172,19 @@ function renderCross() {
   }
 
   const fragment = document.createDocumentFragment();
-
   const groups = groupPlayersByGroup(activePlayers);
 
   Object.keys(groups).sort().forEach(groupKey => {
     const groupPlayers = groups[groupKey];
 
     if (groupPlayers.length < 2) {
-      fragment.appendChild(createGroupHeaderForCross(groupKey));
+      fragment.appendChild(createGroupHeader(groupKey));
       const msg = createMessage(`Ryhmässä ${groupKey === 'DEFAULT' ? 'oletus' : groupKey} on liian vähän pelaajia kohtaamistietoihin.`);
       fragment.appendChild(msg);
       return;
     }
 
-    fragment.appendChild(createGroupHeaderForCross(groupKey, groupPlayers.length));
+    fragment.appendChild(createGroupHeader(groupKey, groupPlayers.length));
 
     const crossTable = createCrossTable(groupPlayers);
     fragment.appendChild(crossTable);
@@ -193,7 +193,10 @@ function renderCross() {
   container.appendChild(fragment);
 }
 
-// ── PLAYERS PAGE ──
+// ═══════════════════════════════════════════════════════
+// Players
+// ═══════════════════════════════════════════════════════
+
 function renderPlayers() {
   const tbody = document.getElementById('player-tbody');
   const countEl = document.getElementById('player-count');
@@ -205,8 +208,7 @@ function renderPlayers() {
   tbody.innerHTML = '';
 
   if (players.length === 0) {
-    const row = createEmptyPlayersRow();
-    tbody.appendChild(row);
+    tbody.appendChild(createEmptyPlayersRow());
     return;
   }
 
@@ -219,4 +221,26 @@ function renderPlayers() {
   });
 
   tbody.appendChild(fragment);
+}
+
+// ═══════════════════════════════════════════════════════
+// Statistiikkapalkki
+// ═══════════════════════════════════════════════════════
+
+function updateStatBar(currentRounds) {
+  const activePlayers = appState.players.filter(p => p.active).length;
+  setStatValue('st-players', activePlayers);
+  setStatValue('st-rounds', currentRounds);
+
+  const lastRnd = appState.rounds[appState.view];
+  const boards = lastRnd ? lastRnd.pairs.filter(p => p.bId !== null).length : 0;
+  const done = lastRnd ? lastRnd.pairs.filter(p => p.res !== null).length : 0;
+
+  setStatValue('st-boards', boards);
+  setStatValue('st-done', done);
+}
+
+function setStatValue(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = value;
 }
