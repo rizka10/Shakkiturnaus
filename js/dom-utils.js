@@ -407,6 +407,18 @@ function groupPairsByGroup(pairs) {
 }
 
 // Exportataan kaikki globaalisti (toistaiseksi)
-window.createMessage = createMessage;
 window.createElement = createElement;
-// ... voit lisätä muita tarvittaessa
+window.createMessage = createMessage;
+window.createGroupHeader = createGroupHeader;
+window.createPairingRow = createPairingRow;
+window.createPlayerCell = createPlayerCell;
+window.createByeRow = createByeRow;
+window.createResultButtons = createResultButtons;
+window.createStandingsTable = createStandingsTable;
+window.createPlayerHistory = createPlayerHistory;
+window.createCrossTable = createCrossTable;
+window.createCrossCell = createCrossCell;
+window.createEmptyPlayersRow = createEmptyPlayersRow;
+window.createPlayerRow = createPlayerRow;
+window.groupPlayersByGroup = groupPlayersByGroup;
+window.groupPairsByGroup = groupPairsByGroup;
